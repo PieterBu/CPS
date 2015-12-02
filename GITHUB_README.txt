@@ -7,7 +7,7 @@
 
 //Erstellen eines neuen GitHubs
 1. git init					-- Im entsprechendem Ordner ausführen
-2. git remote set-url origin https://github.com/USERNAME/OTHERREPOSITORY.git	--Verlinken
+2. git remote add origin https://github.com/USERNAME/OTHERREPOSITORY.git	--Verlinken
 3. git pull origin master 			-- Zum Aktualisieren der Ordner
 4. git add .  					-- Hinzufügen neuer Dateien
 5. git commit -m "Nachricht" 			-- Erkennt die Änderungen
