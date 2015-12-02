@@ -13,10 +13,10 @@ float PID::ComputePID(float Desired, float Meassured, float derivative, float Kp
 	
 	float Output = (Kp * error) + (Ki * integral) + (Kd * derivative);
 	
-	if(Output <= 0 || Output > 0){
-		PreOut = Output;
-	}else{
+	if(Output != Output){
 		Output = PreOut;
+	}else{
+		PreOut = Output;		
 	}
 	
 	return Output;
