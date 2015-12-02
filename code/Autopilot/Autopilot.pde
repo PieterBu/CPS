@@ -17,6 +17,11 @@
 
 #include <PID.h>
 
+//TEST: Serial Communication
+//#include <SoftwareSerial.h>
+//SoftwareSerial mySerial(10, 11);
+//int incomingByte = 0;   // for incoming serial data
+
 // Gains for pidHeading
 
 
@@ -140,6 +145,8 @@ void setup()
     // Set next times for PWM output, serial output, and target change
     nextWrite = hal.scheduler->micros() + PERIOD;
     nextPrint = hal.scheduler->micros() + 1000000;
+
+    //mySerial.begin(57600);
 }
 
 // loop: called repeatedly in a loop
@@ -158,14 +165,15 @@ void loop()
         }
         //MEIN CODE
         
-//Calculation of pn_dot, pe_dot, pd_dot
+        //Calculation of pn_dot, pe_dot, pd_dot
         // printout of u,v,w
         /*
         hal.console->printf("VX: %f \n ",dataSample.data.raw[I_VX]);
         hal.console->printf("VY: %f \n",dataSample.data.raw[I_VY]);
         hal.console->printf("VZ: %f \n\n",dataSample.data.raw[I_VZ]);
         */
-        hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
+                
+        ///hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
 
         //Calculation 
         float THETA=dataSample.data.f[I_THETA];
@@ -201,37 +209,45 @@ void loop()
 
 
 
-            //Befehle kann man Online finden
-        //hal.console->printf("\r\n\r\nHALLOH\r\n\r\n");
+        //Befehle kann man Online finden
+        //hal.console->printf(); //in Google suchen
     
         // Use hal.console to receive a new target
 
         // Compute error in heading, ensuring it is in the range -Pi to Pi
 		
         // Compute heading PID
+         PID Heading;
+        float headingPIDOut=Heading.ComputePID(0,PSI,PSI_dot,1,0,0,0);
         
         // Constrain output of heading PID such that it is a valid target roll
 
-        // Compute roll PID
-        //float rollPIDOut=0;
-        
+        // Compute roll PID 
         PID Roll;
-        float rollPIDOut = Roll.ComputePID(0, PHI, PHI_dot, 1, 0, 0, 0);
-        
-        hal.console->printf("Out: %f \n ",rollPIDOut);
-        
-        
+        float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, 1, 0, 0, 0);
+    
         // Compute altitude PID
-
+        PID Altitude;
+        float ALT = dataSample.data.f[I_ALT];
+        float altitudePIDOut = Altitude.ComputePID(100,ALT,pd_dot,2,0,0,0);
+        hal.console->printf("ALT: %f \n ",ALT);
+        hal.console->printf("OUTalt: %f \n ",altitudePIDOut);
+       
         // Compute climb rate PID
-
+		PID ClimbRate; 
+        float climbratePIDOut = ClimbRate.ComputePID(20,pd_dot,0,1,0,0,0);
+        hal.console->printf("pd_DOT: %f \n ",pd_dot);
+        hal.console->printf("OUTclimbrate: %f \n ",climbratePIDOut);
         // Constrain output of climb rate PID such that it is a valid target pitch
 
         // Compute pitch PID
 		PID Pitch;
-        float pitchPIDOut = Pitch.ComputePID(0.52, THETA, THETA_dot, 1, 0, 0, 0);
+        float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, 1, 0, 0, 0);
+        hal.console->printf("THETA: %f \n ",THETA);
+        hal.console->printf("OUTptch: %f \n ",pitchPIDOut);
         // Compute speed PID
-float speedPIDOut=1;
+		PID Speed;
+		float speedPIDOut=Speed.ComputePID(1,VX,u_dot,1,0,0,0);
 
         // Constrain all control surface outputs to the range -1 to 1
         float aileronL = -1*constrain(rollPIDOut, -1, 1);

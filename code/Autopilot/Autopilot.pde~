@@ -15,7 +15,12 @@
 #include <AP_Notify.h>
 #include <AP_Curve.h>
 
-//#include <PID.h>
+#include <PID.h>
+
+//TEST: Serial Communication
+//#include <SoftwareSerial.h>
+//SoftwareSerial mySerial(10, 11);
+//int incomingByte = 0;   // for incoming serial data
 
 // Gains for pidHeading
 
@@ -140,6 +145,8 @@ void setup()
     // Set next times for PWM output, serial output, and target change
     nextWrite = hal.scheduler->micros() + PERIOD;
     nextPrint = hal.scheduler->micros() + 1000000;
+
+    //mySerial.begin(57600);
 }
 
 // loop: called repeatedly in a loop
@@ -158,55 +165,84 @@ void loop()
         }
         //MEIN CODE
         
-//Calculation of pn_dot, pe_dot, pd_dot
+        //Calculation of pn_dot, pe_dot, pd_dot
         // printout of u,v,w
         /*
         hal.console->printf("VX: %f \n ",dataSample.data.raw[I_VX]);
         hal.console->printf("VY: %f \n",dataSample.data.raw[I_VY]);
         hal.console->printf("VZ: %f \n\n",dataSample.data.raw[I_VZ]);
         */
+                
+        hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
 
         //Calculation 
-        float THETA=dataSample.data.raw[I_THETA];
-        float PHI=dataSample.data.raw[I_PHI];
-        float PSI=dataSample.data.raw[I_PSI];
+        float THETA=dataSample.data.f[I_THETA];
+        float PHI=dataSample.data.f[I_PHI];
+        float PSI=dataSample.data.f[I_PSI];
         
-        float VX=dataSample.data.raw[I_THETA];
-        float VY=dataSample.data.raw[I_PHI];
-        float VZ=dataSample.data.raw[I_PSI];
+        float VX=dataSample.data.f[I_THETA];
+        float VY=dataSample.data.f[I_PHI];
+        float VZ=dataSample.data.f[I_PSI];
 
 
          float pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
          float pe_dot = (cos(THETA)*sin(PSI))*VX +(sin(PHI)*sin(THETA)*sin(PSI)+cos(PHI)*cos(PSI))*VY+(cos(PHI)*sin(THETA)*sin(PSI)-sin(PHI)*cos(PSI))*VZ;
          float pd_dot = -sin(THETA)*VX+sin(PHI)*cos(THETA)*VY+cos(PHI)*cos(THETA)*VZ;
 
+        //CALCULATION OF u_dot, v_dot, w_dot
+        float P=dataSample.data.f[I_P];
+        float Q=dataSample.data.f[I_Q];
+        float R=dataSample.data.f[I_R];
 
-            //Befehle kann man Online finden
+        float AX=dataSample.data.f[I_AX];
+        float AY=dataSample.data.f[I_AY];
+        float AZ=dataSample.data.f[I_AZ];
+
+        float u_dot = (R*VY-Q*VZ)+AX;
+        float v_dot = (P*VZ-R*VY)+AY;
+        float w_dot = (Q*VX-P*VY)+AZ;
+
+        //CALCULATION OF PHI_dot, THETA_dot, PSI_dot
+        float PHI_dot = P+sin(PHI)*tan(THETA)*Q+cos(PHI)*tan(THETA)*R;
+        float THETA_dot = cos(PHI)*Q-sin(PHI)*R;
+        float PSI_dot = sin(PHI)/cos(THETA)*Q+cos(PHI)/cos(THETA)*R;
+
+
+
+        //Befehle kann man Online finden
         //hal.console->printf("\r\n\r\nHALLOH\r\n\r\n");
     
         // Use hal.console to receive a new target
 
         // Compute error in heading, ensuring it is in the range -Pi to Pi
-
+		
         // Compute heading PID
-
+         PID Heading;
+        float heandingPIDout=Heading.ComputePID(0.3,PSI,PSI_dot,1,0,0,0);
+        
         // Constrain output of heading PID such that it is a valid target roll
 
-        // Compute roll PID
-float rollPIDOut=0.05;
+        // Compute roll PID 
+        PID Roll;
+        float rollPIDOut = Roll.ComputePID(heandingPIDout, PHI, PHI_dot, 1, 0, 0, 0);
+    
         // Compute altitude PID
-
+    
+    
+    
         // Compute climb rate PID
 
         // Constrain output of climb rate PID such that it is a valid target pitch
 
         // Compute pitch PID
-float pitchPIDOut=0.2;
+		PID Pitch;
+        float pitchPIDOut = Pitch.ComputePID(0.52, THETA, THETA_dot, 1, 0, 0, 0);
         // Compute speed PID
-float speedPIDOut=1;
+		PID Speed;
+		float speedPIDOut=Speed.ComputePID(1,VX,u_dot,1,0,0,0);
 
         // Constrain all control surface outputs to the range -1 to 1
-        float aileronL = -1 * constrain(rollPIDOut, -1, 1);
+        float aileronL = -1*constrain(rollPIDOut, -1, 1);
         float aileronR = constrain(rollPIDOut, -1, 1);
         float elevatorL = constrain(pitchPIDOut, -1, 1);
         float elevatorR = constrain(pitchPIDOut, -1, 1);
