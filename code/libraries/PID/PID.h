@@ -5,7 +5,7 @@ class AvoidNaN{
         float ReplaceNaN(float Input);
     private:
         float PreOut;
-}
+};
 
 class PID
 {

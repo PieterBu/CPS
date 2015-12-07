@@ -164,41 +164,39 @@ void loop()
             i++;
         }
         //MEIN CODE
-        
-        //Calculation of pn_dot, pe_dot, pd_dot
-        // printout of u,v,w
-        /*
-        hal.console->printf("VX: %f \n ",dataSample.data.raw[I_VX]);
-        hal.console->printf("VY: %f \n",dataSample.data.raw[I_VY]);
-        hal.console->printf("VZ: %f \n\n",dataSample.data.raw[I_VZ]);
-        */
+		
                 
         ///hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
 		
-		//creating objects to avoid NaN
-		AvoidNaN In_THETA, In_PHI, In_PSI, In_VX, In_VY, In_VZ , In_P, In_R, In_Q, IN_AX, IN_AY, IN_AZ;
-				
-        //Calculation 
-        float THETA 	= In_THEAT.ReplaceNaN( dataSample.data.f[I_THETA] );
-        float PHI 		= In_PHI.ReplaceNaN( dataSample.data.f[I_PHI] );
-        float PSI 		= In_PSI.ReplaceNaN( dataSample.data.f[I_PSI] );
+		//Reading inputs creating objects to avoid NaN
+		AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, InAZ, InALT;
+		
+		float AX	= InAX.ReplaceNaN( dataSample.data.f[I_AX] );
+        float AY	= InAY.ReplaceNaN( dataSample.data.f[I_AY] );
+        float AZ	= InAZ.ReplaceNaN( dataSample.data.f[I_AZ] );
         
-        float VX 		= In_VX.ReplaceNaN( dataSample.data.f[I_VX] );
-        float VY		= In_VY.ReplaceNaN( dataSample.data.f[I_VY] );
-        float VZ		= In_VZ.ReplaceNaN( dataSample.data.f[I_VZ] );
+        float P		= InP.ReplaceNaN( dataSample.data.f[I_P] );
+        float Q		= InQ.ReplaceNaN( dataSample.data.f[I_Q] );
+        float R		= InR.ReplaceNaN( dataSample.data.f[I_R] );
+		
+		float THETA 	= InTHETA.ReplaceNaN( dataSample.data.f[I_THETA] );
+        float PHI 		= InPHI.ReplaceNaN( dataSample.data.f[I_PHI] );
+        float PSI 		= InPSI.ReplaceNaN( dataSample.data.f[I_PSI] );
+        
+        float ALT 		= InALT.ReplaceNaN( dataSample.data.f[I_ALT] );
+        
+        float VX 		= InVX.ReplaceNaN( dataSample.data.f[I_VX] );
+        float VY		= InVY.ReplaceNaN( dataSample.data.f[I_VY] );
+        float VZ		= InVZ.ReplaceNaN( dataSample.data.f[I_VZ] );
+        
+               
+        //Start Calculation         
 
         float pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
         float pe_dot = (cos(THETA)*sin(PSI))*VX +(sin(PHI)*sin(THETA)*sin(PSI)+cos(PHI)*cos(PSI))*VY+(cos(PHI)*sin(THETA)*sin(PSI)-sin(PHI)*cos(PSI))*VZ;
         float pd_dot = -sin(THETA)*VX+sin(PHI)*cos(THETA)*VY+cos(PHI)*cos(THETA)*VZ;
 
         //CALCULATION OF u_dot, v_dot, w_dot
-        float P		= In_P.ReplaceNaN( dataSample.data.f[I_P] );
-        float Q		= In_Q.ReplaceNaN( dataSample.data.f[I_Q] );
-        float R		= In_R.ReplaceNaN( dataSample.data.f[I_R] );
-
-        float AX	= In_AX.ReplaceNaN( dataSample.data.f[I_AX] );
-        float AY	= In_AY.ReplaceNaN( dataSample.data.f[I_AY] );
-        float AZ	= In_AZ.ReplaceNaN( dataSample.data.f[I_AZ] );
 
         float u_dot = (R*VY-Q*VZ)+AX;
         float v_dot = (P*VZ-R*VY)+AY;
@@ -208,11 +206,6 @@ void loop()
         float PHI_dot = P+sin(PHI)*tan(THETA)*Q+cos(PHI)*tan(THETA)*R;
         float THETA_dot = cos(PHI)*Q-sin(PHI)*R;
         float PSI_dot = sin(PHI)/cos(THETA)*Q+cos(PHI)/cos(THETA)*R;
-
-
-
-        //Befehle kann man Online finden
-        //hal.console->printf(); //in Google suchen
     
         // Use hal.console to receive a new target
 
@@ -220,7 +213,7 @@ void loop()
 		
         // Compute heading PID
         PID Heading;
-        float headingPIDOut=Heading.ComputePID(0,PSI,PSI_dot,1,0,0,0);
+        float headingPIDOut = Heading.ComputePID(0,PSI,PSI_dot,1,0,0,0);
         
         // Constrain output of heading PID such that it is a valid target roll
 
@@ -229,27 +222,34 @@ void loop()
         float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, 1, 0, 0, 0);
     
         // Compute altitude PID
-        PID Altitude;
-        float ALT = dataSample.data.f[I_ALT];
+        PID Altitude;        
         float altitudePIDOut = Altitude.ComputePID(100,ALT,pd_dot,2,0,0,0);
-        hal.console->printf("ALT: %f \n ",ALT);
-        hal.console->printf("OUTalt: %f \n ",altitudePIDOut);
+        
        
         // Compute climb rate PID
 		PID ClimbRate; 
-        float climbratePIDOut = ClimbRate.ComputePID(20,pd_dot,0,1,0,0,0);
-        hal.console->printf("pd_DOT: %f \n ",pd_dot);
-        hal.console->printf("OUTclimbrate: %f \n ",climbratePIDOut);
+        float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,1,0,0,0);
+        
         // Constrain output of climb rate PID such that it is a valid target pitch
 
         // Compute pitch PID
 		PID Pitch;
-        float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, 1, 0, 0, 0);
-        hal.console->printf("THETA: %f \n ",THETA);
-        hal.console->printf("OUTptch: %f \n ",pitchPIDOut);
+        float pitchPIDOut = Pitch.ComputePID(0.5, THETA, THETA_dot, 1, 0, 0, 0);
+        
         // Compute speed PID
 		PID Speed;
 		float speedPIDOut=Speed.ComputePID(1,VX,u_dot,1,0,0,0);
+		
+		
+		//Printing values
+		hal.console->printf("ALT: %f \n ",ALT);
+        hal.console->printf("OUTalt: %f \n ",altitudePIDOut);
+        
+        hal.console->printf("pd_DOT: %f \n ",pd_dot);
+        hal.console->printf("OUTclimbrate: %f \n ",climbratePIDOut);
+        
+        hal.console->printf("THETA: %f \n ",THETA);
+        hal.console->printf("OUTptch: %f \n ",pitchPIDOut);
 
         // Constrain all control surface outputs to the range -1 to 1
         float aileronL = -1*constrain(rollPIDOut, -1, 1);

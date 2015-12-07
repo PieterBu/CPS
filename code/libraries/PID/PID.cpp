@@ -36,7 +36,7 @@ PID::~PID(){
 AvoidNaN::AvoidNaN(){
     PreOut = 0;
 }
-AvoidNaN::ReplaceNaN(float Input){
+float AvoidNaN::ReplaceNaN(float Input){
     float Output = 0;
     if(Input != Input){    //Input != Input is always true for NaN
         Output = PreOut;
