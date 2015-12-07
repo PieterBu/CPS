@@ -174,29 +174,31 @@ void loop()
         */
                 
         ///hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
-
+		
+		//creating objects to avoid NaN
+		AvoidNaN In_THETA, In_PHI, In_PSI, In_VX, In_VY, In_VZ , In_P, In_R, In_Q, IN_AX, IN_AY, IN_AZ;
+				
         //Calculation 
-        float THETA=dataSample.data.f[I_THETA];
-        float PHI=dataSample.data.f[I_PHI];
-        float PSI=dataSample.data.f[I_PSI];
+        float THETA 	= In_THEAT.ReplaceNaN( dataSample.data.f[I_THETA] );
+        float PHI 		= In_PHI.ReplaceNaN( dataSample.data.f[I_PHI] );
+        float PSI 		= In_PSI.ReplaceNaN( dataSample.data.f[I_PSI] );
         
-        float VX=dataSample.data.f[I_THETA];
-        float VY=dataSample.data.f[I_PHI];
-        float VZ=dataSample.data.f[I_PSI];
+        float VX 		= In_VX.ReplaceNaN( dataSample.data.f[I_VX] );
+        float VY		= In_VY.ReplaceNaN( dataSample.data.f[I_VY] );
+        float VZ		= In_VZ.ReplaceNaN( dataSample.data.f[I_VZ] );
 
-
-         float pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
-         float pe_dot = (cos(THETA)*sin(PSI))*VX +(sin(PHI)*sin(THETA)*sin(PSI)+cos(PHI)*cos(PSI))*VY+(cos(PHI)*sin(THETA)*sin(PSI)-sin(PHI)*cos(PSI))*VZ;
-         float pd_dot = -sin(THETA)*VX+sin(PHI)*cos(THETA)*VY+cos(PHI)*cos(THETA)*VZ;
+        float pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
+        float pe_dot = (cos(THETA)*sin(PSI))*VX +(sin(PHI)*sin(THETA)*sin(PSI)+cos(PHI)*cos(PSI))*VY+(cos(PHI)*sin(THETA)*sin(PSI)-sin(PHI)*cos(PSI))*VZ;
+        float pd_dot = -sin(THETA)*VX+sin(PHI)*cos(THETA)*VY+cos(PHI)*cos(THETA)*VZ;
 
         //CALCULATION OF u_dot, v_dot, w_dot
-        float P=dataSample.data.f[I_P];
-        float Q=dataSample.data.f[I_Q];
-        float R=dataSample.data.f[I_R];
+        float P		= In_P.ReplaceNaN( dataSample.data.f[I_P] );
+        float Q		= In_Q.ReplaceNaN( dataSample.data.f[I_Q] );
+        float R		= In_R.ReplaceNaN( dataSample.data.f[I_R] );
 
-        float AX=dataSample.data.f[I_AX];
-        float AY=dataSample.data.f[I_AY];
-        float AZ=dataSample.data.f[I_AZ];
+        float AX	= In_AX.ReplaceNaN( dataSample.data.f[I_AX] );
+        float AY	= In_AY.ReplaceNaN( dataSample.data.f[I_AY] );
+        float AZ	= In_AZ.ReplaceNaN( dataSample.data.f[I_AZ] );
 
         float u_dot = (R*VY-Q*VZ)+AX;
         float v_dot = (P*VZ-R*VY)+AY;
@@ -217,7 +219,7 @@ void loop()
         // Compute error in heading, ensuring it is in the range -Pi to Pi
 		
         // Compute heading PID
-         PID Heading;
+        PID Heading;
         float headingPIDOut=Heading.ComputePID(0,PSI,PSI_dot,1,0,0,0);
         
         // Constrain output of heading PID such that it is a valid target roll
