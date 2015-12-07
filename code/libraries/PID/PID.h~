@@ -16,4 +16,5 @@ class PID
 
   private:
    float integral;
+   float PreOut;
 };

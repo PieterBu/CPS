@@ -1,4 +1,4 @@
-/// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
+	/// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
 
 #define THISFIRMWARE "CPS-Autopilot-Project"
@@ -17,27 +17,58 @@
 
 #include <PID.h>
 
+
+//create object for AvoidNaN
+AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, InAZ, InALT;
+
+
 //TEST: Serial Communication
 //#include <SoftwareSerial.h>
 //SoftwareSerial mySerial(10, 11);
 //int incomingByte = 0;   // for incoming serial data
 
-// Gains for pidHeading
+//Dt
+float dt=0;
 
+//desired
+float des_head = 45;
+float des_speed = 100;
+
+float des_roll = 0; 
+float des_alt = 0;
+float des_climb = 0;
+float des_pitch = 1; 
+ 
+ 
+// Gains for pidHeading
+float Kp_head = 0.005;
+float Ki_head = 0;
+float Kd_head = 0.00005;
 
 // Gains for pidRoll
-
+float Kp_roll = 1;
+float Ki_roll = 0;
+float Kd_roll = 0;
 
 // Gains for pidAltitude
-
+float Kp_alt = 0;
+float Ki_alt = 0;
+float Kd_alt = 0;
 
 // Gains for pidClimbRate
-
+float Kp_climb = 0;
+float Ki_climb = 0;
+float Kd_climb = 0;
 
 // Gains for pidPitch
-
+float Kp_pitch = 1;
+float Ki_pitch = 0;
+float Kd_pitch = 0;
 
 // Gains for pidSpeed
+float Kp_speed = 1;
+float Ki_speed = 0;
+float Kd_speed = 0;
 
 
 // Hardware Abstraction Layer
@@ -145,8 +176,9 @@ void setup()
     // Set next times for PWM output, serial output, and target change
     nextWrite = hal.scheduler->micros() + PERIOD;
     nextPrint = hal.scheduler->micros() + 1000000;
-
-    //mySerial.begin(57600);
+    
+    
+   
 }
 
 // loop: called repeatedly in a loop
@@ -169,7 +201,7 @@ void loop()
         ///hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
 		
 		//Reading inputs creating objects to avoid NaN
-		AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, InAZ, InALT;
+		
 		
 		float AX	= InAX.ReplaceNaN( dataSample.data.f[I_AX] );
         float AY	= InAY.ReplaceNaN( dataSample.data.f[I_AY] );
@@ -212,45 +244,64 @@ void loop()
         // Compute error in heading, ensuring it is in the range -Pi to Pi
 		
         // Compute heading PID
+        
         PID Heading;
-        float headingPIDOut = Heading.ComputePID(0,PSI,PSI_dot,1,0,0,0);
+        float headingPIDOut = Heading.ComputePID(des_head,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
         
         // Constrain output of heading PID such that it is a valid target roll
 
         // Compute roll PID 
         PID Roll;
-        float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, 1, 0, 0, 0);
+			//PID in Kaskade
+		//float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
+			//PID manuel desired Values
+		float rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
     
         // Compute altitude PID
-        PID Altitude;        
-        float altitudePIDOut = Altitude.ComputePID(100,ALT,pd_dot,2,0,0,0);
+        PID Altitude;   
+			//PID in Kaskade
+		//float altitudePIDOut = Altitude.ComputePID(75,-1*ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
+			//PID manuel desired Values
+       float altitudePIDOut = Altitude.ComputePID(des_alt,-1*ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
         
-       
+        
         // Compute climb rate PID
 		PID ClimbRate; 
-        float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,1,0,0,0);
-        
+			//PID in Kaskade
+        //float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+			//PID manuel desired Values
+		float climbratePIDOut = ClimbRate.ComputePID(des_climb,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+			
         // Constrain output of climb rate PID such that it is a valid target pitch
 
         // Compute pitch PID
 		PID Pitch;
-        float pitchPIDOut = Pitch.ComputePID(0.5, THETA, THETA_dot, 1, 0, 0, 0);
+			//PID in Kaskade
+        //float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+			//PID manuel desired Values
+        float pitchPIDOut = Pitch.ComputePID(des_pitch, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+        
         
         // Compute speed PID
 		PID Speed;
-		float speedPIDOut=Speed.ComputePID(1,VX,u_dot,1,0,0,0);
-		
+	    float speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
+        
 		
 		//Printing values
 		hal.console->printf("ALT: %f \n ",ALT);
         hal.console->printf("OUTalt: %f \n ",altitudePIDOut);
+        
+        hal.console->printf("VX: %f \n ",VX);
+        hal.console->printf("OUTspeed: %f \n ",speedPIDOut);
+        
         
         hal.console->printf("pd_DOT: %f \n ",pd_dot);
         hal.console->printf("OUTclimbrate: %f \n ",climbratePIDOut);
         
         hal.console->printf("THETA: %f \n ",THETA);
         hal.console->printf("OUTptch: %f \n ",pitchPIDOut);
-
+		
+		
         // Constrain all control surface outputs to the range -1 to 1
         float aileronL = -1*constrain(rollPIDOut, -1, 1);
         float aileronR = constrain(rollPIDOut, -1, 1);
