@@ -35,9 +35,9 @@ float des_head = 45;
 float des_speed = 100;
 
 float des_roll = 0; 
-float des_alt = 0;
-float des_climb = 0;
-float des_pitch = 1; 
+float des_alt = 100;
+float des_climb = 7;
+float des_pitch = 90; 
  
  
 // Gains for pidHeading
@@ -51,19 +51,19 @@ float Ki_roll = 0;
 float Kd_roll = 0;
 
 // Gains for pidAltitude
-float Kp_alt = 0;
+float Kp_alt = 10;
 float Ki_alt = 0;
-float Kd_alt = 0;
+float Kd_alt = 0.005;
 
 // Gains for pidClimbRate
-float Kp_climb = 0;
+float Kp_climb = 3;
 float Ki_climb = 0;
-float Kd_climb = 0;
+float Kd_climb = 0.0005;
 
 // Gains for pidPitch
-float Kp_pitch = 1;
+float Kp_pitch = 0.00005;
 float Ki_pitch = 0;
-float Kd_pitch = 0;
+float Kd_pitch = 0.00000005;
 
 // Gains for pidSpeed
 float Kp_speed = 1;
@@ -219,9 +219,8 @@ void loop()
         
         float VX 		= InVX.ReplaceNaN( dataSample.data.f[I_VX] );
         float VY		= InVY.ReplaceNaN( dataSample.data.f[I_VY] );
-        float VZ		= InVZ.ReplaceNaN( dataSample.data.f[I_VZ] );
-        
-               
+        float VZ		= InVZ.ReplaceNaN( dataSample.data.f[I_VZ] );         
+              
         //Start Calculation         
 
         float pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
@@ -256,7 +255,8 @@ void loop()
 		//float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
 			//PID manuel desired Values
 		float rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
-    
+
+		
         // Compute altitude PID
         PID Altitude;   
 			//PID in Kaskade
@@ -268,39 +268,61 @@ void loop()
         // Compute climb rate PID
 		PID ClimbRate; 
 			//PID in Kaskade
-        //float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+        float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
 			//PID manuel desired Values
-		float climbratePIDOut = ClimbRate.ComputePID(des_climb,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+		//float climbratePIDOut = ClimbRate.ComputePID(des_climb,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
 			
         // Constrain output of climb rate PID such that it is a valid target pitch
 
         // Compute pitch PID
 		PID Pitch;
 			//PID in Kaskade
-        //float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+        float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
 			//PID manuel desired Values
-        float pitchPIDOut = Pitch.ComputePID(des_pitch, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+        //float pitchPIDOut = Pitch.ComputePID(des_pitch, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
         
         
         // Compute speed PID
 		PID Speed;
 	    float speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
         
-		
+		hal.console->printf("ALT: %f \n ",ALT);
+		hal.console->printf("pd_DOT: %f \n ",pd_dot);
+		hal.console->printf("THETA: %f \n ",THETA);
 		//Printing values
+		/*
 		hal.console->printf("ALT: %f \n ",ALT);
         hal.console->printf("OUTalt: %f \n ",altitudePIDOut);
         
         hal.console->printf("VX: %f \n ",VX);
         hal.console->printf("OUTspeed: %f \n ",speedPIDOut);
         
-        
         hal.console->printf("pd_DOT: %f \n ",pd_dot);
         hal.console->printf("OUTclimbrate: %f \n ",climbratePIDOut);
         
+        */
+        /*
         hal.console->printf("THETA: %f \n ",THETA);
-        hal.console->printf("OUTptch: %f \n ",pitchPIDOut);
-		
+        hal.console->printf("OUTpitch: %f \n ",pitchPIDOut);
+       
+        hal.console->printf("AX: %f \n ",AX);
+        hal.console->printf("AY: %f \n ",AY);
+        hal.console->printf("AZ: %f \n ",AZ);
+       
+        hal.console->printf("P: %f \n ",P);
+        hal.console->printf("Q: %f \n ",Q);
+        hal.console->printf("R: %f \n ",R);
+              
+        hal.console->printf("THETA: %f \n ",THETA);
+        hal.console->printf("PHI: %f \n ",PHI);
+        hal.console->printf("PSI: %f \n ",PSI);    
+        
+        hal.console->printf("ALT: %f \n ",ALT);   
+        
+        hal.console->printf("VX: %f \n ",VX);
+        hal.console->printf("VY: %f \n ",VY);
+        hal.console->printf("VZ: %f \n ",VZ);
+		*/
 		
         // Constrain all control surface outputs to the range -1 to 1
         float aileronL = -1*constrain(rollPIDOut, -1, 1);
