@@ -28,46 +28,46 @@ AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, In
 //int incomingByte = 0;   // for incoming serial data
 
 //Dt
-float dt=0;
+float dt=0.000000125;
 
 //desired
 float des_head = 45;
-float des_speed = 100;
+float des_speed = 20;
 
 float des_roll = 0; 
-float des_alt = 100;
+float des_alt = -50;
 float des_climb = 7;
 float des_pitch = 90; 
  
  
 // Gains for pidHeading
-float Kp_head = 0.005;
-float Ki_head = 0;
+float Kp_head = 5;
+float Ki_head = 0.001;
 float Kd_head = 0.00005;
 
 // Gains for pidRoll
-float Kp_roll = 1;
-float Ki_roll = 0;
-float Kd_roll = 0;
+float Kp_roll = 0.25;
+float Ki_roll = 0.5;
+float Kd_roll = 0.000001;
 
 // Gains for pidAltitude
-float Kp_alt = 10;
-float Ki_alt = 0;
-float Kd_alt = 0.005;
+float Kp_alt = 5.5;//5;
+float Ki_alt = 3.5; //5;
+float Kd_alt = 0; //0.005;
 
 // Gains for pidClimbRate
-float Kp_climb = 3;
-float Ki_climb = 0;
-float Kd_climb = 0.0005;
+float Kp_climb = 0.0021;//3;
+float Ki_climb = 0.06; //1;
+float Kd_climb = 0; //no derivative term
 
 // Gains for pidPitch
-float Kp_pitch = 0.00005;
-float Ki_pitch = 0;
-float Kd_pitch = 0.00000005;
+float Kp_pitch = 0.31; //0.00005;
+float Ki_pitch = 0.73; //1;
+float Kd_pitch = 0; //0.00000005;
 
 // Gains for pidSpeed
-float Kp_speed = 1;
-float Ki_speed = 0;
+float Kp_speed = 0.5;
+float Ki_speed = 1;
 float Kd_speed = 0;
 
 
@@ -255,20 +255,33 @@ void loop()
 		//float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
 			//PID manuel desired Values
 		float rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
-
+		
+		hal.console->printf("PHI: %f \n ", PHI);
+        hal.console->printf("rollError: %f \n ",des_roll - PHI);
+        hal.console->printf("rollPIDOut: %f \n ", rollPIDOut);
+        
 		
         // Compute altitude PID
         PID Altitude;   
 			//PID in Kaskade
 		//float altitudePIDOut = Altitude.ComputePID(75,-1*ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
 			//PID manuel desired Values
-       float altitudePIDOut = Altitude.ComputePID(des_alt,-1*ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
-        
-        
+		float altitudePIDOut = Altitude.ComputePID(des_alt,ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
+		altitudePIDOut = -1*altitudePIDOut;
+        /*
+        hal.console->printf("ALT: %f \n ", ALT);
+        hal.console->printf("altitudeError: %f \n ",des_alt - ALT);
+        hal.console->printf("altitudePIDOut: %f \n ", altitudePIDOut);
+        */
         // Compute climb rate PID
 		PID ClimbRate; 
 			//PID in Kaskade
         float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+		/*
+		hal.console->printf("pd_dot: %f \n ", pd_dot);
+        hal.console->printf("climbrateError: %f \n ",altitudePIDOut - pd_dot);
+        hal.console->printf("climbratePIDOut: %f \n ", climbratePIDOut);
+		*/
 			//PID manuel desired Values
 		//float climbratePIDOut = ClimbRate.ComputePID(des_climb,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
 			
@@ -278,6 +291,13 @@ void loop()
 		PID Pitch;
 			//PID in Kaskade
         float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+		/*
+		hal.console->printf("theta: %f \n ", THETA);
+        hal.console->printf("pitchError: %f \n ",climbratePIDOut - THETA);
+        hal.console->printf("pitchPIDOut: %f \n ", pitchPIDOut);
+		*/
+		
+		
 			//PID manuel desired Values
         //float pitchPIDOut = Pitch.ComputePID(des_pitch, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
         
@@ -285,7 +305,13 @@ void loop()
         // Compute speed PID
 		PID Speed;
 	    float speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
-        
+        /*SpeedControll Information
+        hal.console->printf("VX: %f \n ",VX);
+        hal.console->printf("error: %f \n ",des_speed -VX);
+        hal.console->printf("speedPIDOut: %f \n ",speedPIDOut);
+        */
+ 
+		/*	
 		hal.console->printf("ALT: %f \n ",ALT);
 		hal.console->printf("pd_DOT: %f \n ",pd_dot);
 		hal.console->printf("THETA: %f \n ",THETA);
