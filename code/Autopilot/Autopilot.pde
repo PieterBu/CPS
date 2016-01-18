@@ -31,19 +31,19 @@ AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, In
 float dt=0.000000125;
 
 //desired
-float des_head = 45;
+float des_head = 1.5;
 float des_speed = 20;
 
 float des_roll = 0; 
-float des_alt = -50;
+float des_alt = -125;
 float des_climb = 7;
 float des_pitch = 90; 
  
  
 // Gains for pidHeading
 float Kp_head = 5;
-float Ki_head = 0.001;
-float Kd_head = 0.00005;
+float Ki_head = 0.1;
+float Kd_head = 0.005;
 
 // Gains for pidRoll
 float Kp_roll = 0.25;
@@ -51,7 +51,7 @@ float Ki_roll = 0.5;
 float Kd_roll = 0.000001;
 
 // Gains for pidAltitude
-float Kp_alt = 5.5;//5;
+float Kp_alt = 0.85;//5.5;//5;
 float Ki_alt = 3.5; //5;
 float Kd_alt = 0; //0.005;
 
@@ -245,7 +245,13 @@ void loop()
         // Compute heading PID
         
         PID Heading;
-        float headingPIDOut = Heading.ComputePID(des_head,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
+        float headingPIDOut = Heading.ComputePID(PSI,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
+        headingPIDOut = 5;
+		hal.console->printf("PSI: %f \n ", PSI);
+        hal.console->printf("headingError: %f \n ",des_head - PSI);
+        hal.console->printf("headingPIDOut: %f \n ", headingPIDOut);
+        
+        
         
         // Constrain output of heading PID such that it is a valid target roll
 
@@ -255,11 +261,11 @@ void loop()
 		//float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
 			//PID manuel desired Values
 		float rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
-		
+		/*
 		hal.console->printf("PHI: %f \n ", PHI);
         hal.console->printf("rollError: %f \n ",des_roll - PHI);
         hal.console->printf("rollPIDOut: %f \n ", rollPIDOut);
-        
+        */
 		
         // Compute altitude PID
         PID Altitude;   
@@ -303,6 +309,7 @@ void loop()
         
         
         // Compute speed PID
+       
 		PID Speed;
 	    float speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
         /*SpeedControll Information
