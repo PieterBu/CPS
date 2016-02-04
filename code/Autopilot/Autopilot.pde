@@ -20,12 +20,15 @@
 
 //create object for AvoidNaN
 AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, InAZ, InALT;
-
+float AX, AY, AZ, P, Q, R, THETA, PHI, PSI, ALT, VX, VY, VZ, pn_dot, pe_dot, pd_dot, u_dot, v_dot, w_dot, PHI_dot, THETA_dot, PSI_dot;
+bool TakeOff();
 
 //TEST: Serial Communication
 //#include <SoftwareSerial.h>
 //SoftwareSerial mySerial(10, 11);
 //int incomingByte = 0;   // for incoming serial data
+
+
 
 //Dt
 float dt=0.000000125;
@@ -195,168 +198,79 @@ void loop()
             dataSample.data.raw[i] = Wire.read();
             i++;
         }
-        //MEIN CODE
-		
-                
+                    
         ///hal.console->printf("IN: %f \n ",dataSample.data.f[I_PHI]);
 		
 		//Reading inputs creating objects to avoid NaN
-		
-		
-		float AX	= InAX.ReplaceNaN( dataSample.data.f[I_AX] );
-        float AY	= InAY.ReplaceNaN( dataSample.data.f[I_AY] );
-        float AZ	= InAZ.ReplaceNaN( dataSample.data.f[I_AZ] );
+		AX	= InAX.ReplaceNaN( dataSample.data.f[I_AX] );
+        AY	= InAY.ReplaceNaN( dataSample.data.f[I_AY] );
+        AZ	= InAZ.ReplaceNaN( dataSample.data.f[I_AZ] );
         
-        float P		= InP.ReplaceNaN( dataSample.data.f[I_P] );
-        float Q		= InQ.ReplaceNaN( dataSample.data.f[I_Q] );
-        float R		= InR.ReplaceNaN( dataSample.data.f[I_R] );
+        P		= InP.ReplaceNaN( dataSample.data.f[I_P] );
+        Q		= InQ.ReplaceNaN( dataSample.data.f[I_Q] );
+        R		= InR.ReplaceNaN( dataSample.data.f[I_R] );
 		
-		float THETA 	= InTHETA.ReplaceNaN( dataSample.data.f[I_THETA] );
-        float PHI 		= InPHI.ReplaceNaN( dataSample.data.f[I_PHI] );
-        float PSI 		= InPSI.ReplaceNaN( dataSample.data.f[I_PSI] );
+		THETA = InTHETA.ReplaceNaN( dataSample.data.f[I_THETA] );
+        PHI 	= InPHI.ReplaceNaN( dataSample.data.f[I_PHI] );
+        PSI 	= InPSI.ReplaceNaN( dataSample.data.f[I_PSI] );
         
-        float ALT 		= InALT.ReplaceNaN( dataSample.data.f[I_ALT] );
+        ALT 	= InALT.ReplaceNaN( dataSample.data.f[I_ALT] );
         
-        float VX 		= InVX.ReplaceNaN( dataSample.data.f[I_VX] );
-        float VY		= InVY.ReplaceNaN( dataSample.data.f[I_VY] );
-        float VZ		= InVZ.ReplaceNaN( dataSample.data.f[I_VZ] );         
+        VX 	= InVX.ReplaceNaN( dataSample.data.f[I_VX] );
+        VY	= InVY.ReplaceNaN( dataSample.data.f[I_VY] );
+        VZ	= InVZ.ReplaceNaN( dataSample.data.f[I_VZ] );         
               
         //Start Calculation         
+        pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
+        pe_dot = (cos(THETA)*sin(PSI))*VX +(sin(PHI)*sin(THETA)*sin(PSI)+cos(PHI)*cos(PSI))*VY+(cos(PHI)*sin(THETA)*sin(PSI)-sin(PHI)*cos(PSI))*VZ;
+        pd_dot = -sin(THETA)*VX+sin(PHI)*cos(THETA)*VY+cos(PHI)*cos(THETA)*VZ;
 
-        float pn_dot = (cos(THETA)*cos(PSI))*VX +(sin(PHI)*sin(THETA)*cos(PSI)-cos(PHI)*sin(PSI))*VY+(cos(PHI)*sin(THETA)*cos(PSI)+sin(PHI)*sin(PSI))*VZ;
-        float pe_dot = (cos(THETA)*sin(PSI))*VX +(sin(PHI)*sin(THETA)*sin(PSI)+cos(PHI)*cos(PSI))*VY+(cos(PHI)*sin(THETA)*sin(PSI)-sin(PHI)*cos(PSI))*VZ;
-        float pd_dot = -sin(THETA)*VX+sin(PHI)*cos(THETA)*VY+cos(PHI)*cos(THETA)*VZ;
-
-        //CALCULATION OF u_dot, v_dot, w_dot
-
-        float u_dot = (R*VY-Q*VZ)+AX;
-        float v_dot = (P*VZ-R*VY)+AY;
-        float w_dot = (Q*VX-P*VY)+AZ;
+        u_dot = (R*VY-Q*VZ)+AX;
+        v_dot = (P*VZ-R*VY)+AY;
+        w_dot = (Q*VX-P*VY)+AZ;
 
         //CALCULATION OF PHI_dot, THETA_dot, PSI_dot
-        float PHI_dot = P+sin(PHI)*tan(THETA)*Q+cos(PHI)*tan(THETA)*R;
-        float THETA_dot = cos(PHI)*Q-sin(PHI)*R;
-        float PSI_dot = sin(PHI)/cos(THETA)*Q+cos(PHI)/cos(THETA)*R;
-    
-        // Use hal.console to receive a new target
+        PHI_dot = P+sin(PHI)*tan(THETA)*Q+cos(PHI)*tan(THETA)*R;
+        THETA_dot = cos(PHI)*Q-sin(PHI)*R;
+        PSI_dot = sin(PHI)/cos(THETA)*Q+cos(PHI)/cos(THETA)*R;
 
-        // Compute error in heading, ensuring it is in the range -Pi to Pi
 		
-        // Compute heading PID
-        
-        PID Heading;
-        float headingPIDOut = Heading.ComputePID(PSI,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
-        headingPIDOut = 5;
-		hal.console->printf("PSI: %f \n ", PSI);
-        hal.console->printf("headingError: %f \n ",des_head - PSI);
-        hal.console->printf("headingPIDOut: %f \n ", headingPIDOut);
-        
-        
-        
-        // Constrain output of heading PID such that it is a valid target roll
-
-        // Compute roll PID 
-        PID Roll;
-			//PID in Kaskade
-		//float rollPIDOut = Roll.ComputePID(headingPIDOut, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
-			//PID manuel desired Values
-		float rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
-		/*
-		hal.console->printf("PHI: %f \n ", PHI);
-        hal.console->printf("rollError: %f \n ",des_roll - PHI);
-        hal.console->printf("rollPIDOut: %f \n ", rollPIDOut);
-        */
-		
-        // Compute altitude PID
-        PID Altitude;   
-			//PID in Kaskade
-		//float altitudePIDOut = Altitude.ComputePID(75,-1*ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
-			//PID manuel desired Values
-		float altitudePIDOut = Altitude.ComputePID(des_alt,ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
-		altitudePIDOut = -1*altitudePIDOut;
-        /*
-        hal.console->printf("ALT: %f \n ", ALT);
-        hal.console->printf("altitudeError: %f \n ",des_alt - ALT);
-        hal.console->printf("altitudePIDOut: %f \n ", altitudePIDOut);
-        */
-        // Compute climb rate PID
-		PID ClimbRate; 
-			//PID in Kaskade
-        float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
-		/*
-		hal.console->printf("pd_dot: %f \n ", pd_dot);
-        hal.console->printf("climbrateError: %f \n ",altitudePIDOut - pd_dot);
-        hal.console->printf("climbratePIDOut: %f \n ", climbratePIDOut);
-		*/
-			//PID manuel desired Values
-		//float climbratePIDOut = ClimbRate.ComputePID(des_climb,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+		float speedPIDOut, pitchPIDOut, rollPIDOut;
+        if(TakeOff()){
 			
-        // Constrain output of climb rate PID such that it is a valid target pitch
-
-        // Compute pitch PID
-		PID Pitch;
-			//PID in Kaskade
-        float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
-		/*
-		hal.console->printf("theta: %f \n ", THETA);
-        hal.console->printf("pitchError: %f \n ",climbratePIDOut - THETA);
-        hal.console->printf("pitchPIDOut: %f \n ", pitchPIDOut);
-		*/
+			Ki_climb = 1; //Make it unstable
+			
+			// Compute heading PID
+			PID Heading;
+			float headingPIDOut = Heading.ComputePID(PSI,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
+			headingPIDOut = 5;																		//somthing is not working her	
+			// Compute roll PID 
+			PID Roll;
+			rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
+			// Compute altitude PID
+			PID Altitude;   
+			float altitudePIDOut = Altitude.ComputePID(des_alt,ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
+			altitudePIDOut = -1*altitudePIDOut; //change sign
+			// Compute climb rate PID
+			PID ClimbRate; 
+			float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+			// Compute pitch PID
+			PID Pitch;
+			pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+			// Compute speed PID
+			PID Speed;
+			speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
+			
+			//Simplex switch
+			if(false){
+			
+			}
+		}
 		
-		
-			//PID manuel desired Values
-        //float pitchPIDOut = Pitch.ComputePID(des_pitch, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
         
         
-        // Compute speed PID
-       
-		PID Speed;
-	    float speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
-        /*SpeedControll Information
-        hal.console->printf("VX: %f \n ",VX);
-        hal.console->printf("error: %f \n ",des_speed -VX);
-        hal.console->printf("speedPIDOut: %f \n ",speedPIDOut);
-        */
- 
-		/*	
-		hal.console->printf("ALT: %f \n ",ALT);
-		hal.console->printf("pd_DOT: %f \n ",pd_dot);
-		hal.console->printf("THETA: %f \n ",THETA);
-		//Printing values
-		/*
-		hal.console->printf("ALT: %f \n ",ALT);
-        hal.console->printf("OUTalt: %f \n ",altitudePIDOut);
         
-        hal.console->printf("VX: %f \n ",VX);
-        hal.console->printf("OUTspeed: %f \n ",speedPIDOut);
-        
-        hal.console->printf("pd_DOT: %f \n ",pd_dot);
-        hal.console->printf("OUTclimbrate: %f \n ",climbratePIDOut);
-        
-        */
-        /*
-        hal.console->printf("THETA: %f \n ",THETA);
-        hal.console->printf("OUTpitch: %f \n ",pitchPIDOut);
-       
-        hal.console->printf("AX: %f \n ",AX);
-        hal.console->printf("AY: %f \n ",AY);
-        hal.console->printf("AZ: %f \n ",AZ);
-       
-        hal.console->printf("P: %f \n ",P);
-        hal.console->printf("Q: %f \n ",Q);
-        hal.console->printf("R: %f \n ",R);
-              
-        hal.console->printf("THETA: %f \n ",THETA);
-        hal.console->printf("PHI: %f \n ",PHI);
-        hal.console->printf("PSI: %f \n ",PSI);    
-        
-        hal.console->printf("ALT: %f \n ",ALT);   
-        
-        hal.console->printf("VX: %f \n ",VX);
-        hal.console->printf("VY: %f \n ",VY);
-        hal.console->printf("VZ: %f \n ",VZ);
-		*/
-		
+        //# preexist code 
         // Constrain all control surface outputs to the range -1 to 1
         float aileronL = -1*constrain(rollPIDOut, -1, 1);
         float aileronR = constrain(rollPIDOut, -1, 1);
@@ -364,9 +278,10 @@ void loop()
         float elevatorR = constrain(pitchPIDOut, -1, 1);
         float throttle = constrain(speedPIDOut, -1, 1);
         
-#define SERVO_MIN 1000 // Minimum duty cycle
-#define SERVO_MID 1500 // Mid duty cycle
-#define SERVO_MAX 2000 // Maximum duty cycle
+		#define SERVO_MIN 1000 // Minimum duty cycle
+		#define SERVO_MID 1500 // Mid duty cycle
+		#define SERVO_MAX 2000 // Maximum duty cycle
+        
         // Compute duty cycle for PWM output from generic control
         int16_t aileronLOut = ((aileronL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
         int16_t aileronROut = ((aileronR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
@@ -384,6 +299,101 @@ void loop()
         hal.rcout->write(2, aileronROut);
         hal.rcout->write(3, aileronLOut);
     }
+}
+
+bool TakeOff(){
+	static bool TakeOff = false;
+	if(!TakeOff){
+		// Compute heading PID
+		PID Heading;
+		float headingPIDOut = Heading.ComputePID(PSI,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
+		headingPIDOut = 5;																		//somthing is not working here
+		/*
+		hal.console->printf("PSI: %f \n ", PSI);
+		hal.console->printf("headingError: %f \n ",des_head - PSI);
+		hal.console->printf("headingPIDOut: %f \n ", headingPIDOut);
+		*/
+		
+		// Compute roll PID 
+		PID Roll;
+		float rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
+		/*
+		hal.console->printf("PHI: %f \n ", PHI);
+		hal.console->printf("rollError: %f \n ",des_roll - PHI);
+		hal.console->printf("rollPIDOut: %f \n ", rollPIDOut);
+		*/
+		
+		// Compute altitude PID
+		PID Altitude;   
+		float altitudePIDOut = Altitude.ComputePID(des_alt,ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
+		altitudePIDOut = -1*altitudePIDOut; //change sign
+		/*
+		hal.console->printf("ALT: %f \n ", ALT);
+		hal.console->printf("altitudeError: %f \n ",des_alt - ALT);
+		hal.console->printf("altitudePIDOut: %f \n ", altitudePIDOut);
+		*/
+		
+		
+		// Compute climb rate PID
+		PID ClimbRate; 
+		float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+		/*
+		hal.console->printf("pd_dot: %f \n ", pd_dot);
+		hal.console->printf("climbrateError: %f \n ",altitudePIDOut - pd_dot);
+		hal.console->printf("climbratePIDOut: %f \n ", climbratePIDOut);
+		*/
+
+		// Compute pitch PID
+		PID Pitch;
+		float pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+		/*
+		hal.console->printf("theta: %f \n ", THETA);
+		hal.console->printf("pitchError: %f \n ",climbratePIDOut - THETA);
+		hal.console->printf("pitchPIDOut: %f \n ", pitchPIDOut);
+		*/
+		
+		// Compute speed PID
+		PID Speed;
+		float speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
+		/*SpeedControll Information
+		hal.console->printf("VX: %f \n ",VX);
+		hal.console->printf("error: %f \n ",des_speed -VX);
+		hal.console->printf("speedPIDOut: %f \n ",speedPIDOut);
+		*/
+		
+		//# preexist code 
+		// Constrain all control surface outputs to the range -1 to 1
+		float aileronL = -1*constrain(rollPIDOut, -1, 1);
+		float aileronR = constrain(rollPIDOut, -1, 1);
+		float elevatorL = constrain(pitchPIDOut, -1, 1);
+		float elevatorR = constrain(pitchPIDOut, -1, 1);
+		float throttle = constrain(speedPIDOut, -1, 1);
+		
+		#define SERVO_MIN 1000 // Minimum duty cycle
+		#define SERVO_MID 1500 // Mid duty cycle
+		#define SERVO_MAX 2000 // Maximum duty cycle
+		
+		// Compute duty cycle for PWM output from generic control
+		int16_t aileronLOut = ((aileronL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+		int16_t aileronROut = ((aileronR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+		int16_t elevatorLOut = ((elevatorL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+		int16_t elevatorROut = ((elevatorR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+		int16_t throttleOut = ((throttle+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+
+		// Output PWM
+		hal.rcout->write(0, throttleOut);
+		hal.rcout->write(1, elevatorLOut);
+		hal.rcout->write(2, aileronROut);
+		hal.rcout->write(3, aileronLOut);
+		
+		//take off condition
+		if( abs(des_alt - ALT) < 1){
+			TakeOff = true;
+			return TakeOff;
+		}else{
+			return TakeOff;
+		}
+	}
 }
 
 AP_HAL_MAIN();
