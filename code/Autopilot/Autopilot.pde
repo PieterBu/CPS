@@ -21,6 +21,7 @@
 //create object for AvoidNaN
 AvoidNaN InTHETA, InPHI, InPSI, InVX, InVY, InVZ , InP, InR, InQ, InAX, InAY, InAZ, InALT;
 float AX, AY, AZ, P, Q, R, THETA, PHI, PSI, ALT, VX, VY, VZ, pn_dot, pe_dot, pd_dot, u_dot, v_dot, w_dot, PHI_dot, THETA_dot, PSI_dot;
+bool TakeOffBool = false;
 bool TakeOff();
 
 //TEST: Serial Communication
@@ -234,11 +235,22 @@ void loop()
         THETA_dot = cos(PHI)*Q-sin(PHI)*R;
         PSI_dot = sin(PHI)/cos(THETA)*Q+cos(PHI)/cos(THETA)*R;
 
+		if(ALT > -1){
+			TakeOffBool = false;
+		}
+
+		
 		
 		float speedPIDOut, pitchPIDOut, rollPIDOut;
         if(TakeOff()){
+			hal.console->printf("Unstable \n ");
 			
-			Ki_climb = 1; //Make it unstable
+			float Kp_alt_unstable = 20;
+			float Ki_alt_unstable = 100;
+			float Kd_alt_unstable = 5;
+			float Ki_climb_unstable = 100;
+			float Kd_pitch_unstable = 0.4;
+			float Ki_pitch_unstable = 100;
 			
 			// Compute heading PID
 			PID Heading;
@@ -249,14 +261,14 @@ void loop()
 			rollPIDOut = Roll.ComputePID(des_roll, PHI, PHI_dot, Kp_roll,Ki_roll,Kd_roll,dt);
 			// Compute altitude PID
 			PID Altitude;   
-			float altitudePIDOut = Altitude.ComputePID(des_alt,ALT,pd_dot,Kp_alt,Ki_alt,Kd_alt,dt);
+			float altitudePIDOut = Altitude.ComputePID(des_alt,ALT,pd_dot,Kp_alt_unstable,Ki_alt_unstable,Kd_alt_unstable,dt);
 			altitudePIDOut = -1*altitudePIDOut; //change sign
 			// Compute climb rate PID
 			PID ClimbRate; 
-			float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb,Kd_climb,dt);
+			float climbratePIDOut = ClimbRate.ComputePID(altitudePIDOut,pd_dot,0,Kp_climb,Ki_climb_unstable,Kd_climb,dt);
 			// Compute pitch PID
 			PID Pitch;
-			pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch,Kd_pitch,dt);
+			pitchPIDOut = Pitch.ComputePID(climbratePIDOut, THETA, THETA_dot, Kp_pitch,Ki_pitch_unstable,Kd_pitch_unstable,dt);
 			// Compute speed PID
 			PID Speed;
 			speedPIDOut = Pitch.ComputePID(des_speed, VX, u_dot, Kp_speed,Ki_speed,Kd_speed,dt);
@@ -265,45 +277,50 @@ void loop()
 			if(false){
 			
 			}
+			
+			//# preexist code 
+			// Constrain all control surface outputs to the range -1 to 1
+			float aileronL = -1*constrain(rollPIDOut, -1, 1);
+			float aileronR = constrain(rollPIDOut, -1, 1);
+			float elevatorL = constrain(pitchPIDOut, -1, 1);
+			float elevatorR = constrain(pitchPIDOut, -1, 1);
+			float throttle = constrain(speedPIDOut, -1, 1);
+			
+			#define SERVO_MIN 1000 // Minimum duty cycle
+			#define SERVO_MID 1500 // Mid duty cycle
+			#define SERVO_MAX 2000 // Maximum duty cycle
+			
+			// Compute duty cycle for PWM output from generic control
+			int16_t aileronLOut = ((aileronL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+			int16_t aileronROut = ((aileronR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+			int16_t elevatorLOut = ((elevatorL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+			int16_t elevatorROut = ((elevatorR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+			int16_t throttleOut = ((throttle+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
+			if(time >= nextPrint) {
+				// Print some status
+				nextPrint += 1000000;
+				hal.console->printf("** PERIOD **\r\n");
+			}
+			// Output PWM
+			hal.rcout->write(0, throttleOut);
+			hal.rcout->write(1, elevatorLOut);
+			hal.rcout->write(2, aileronROut);
+			hal.rcout->write(3, aileronLOut);
+    }
+		
+		
 		}
 		
         
         
         
-        //# preexist code 
-        // Constrain all control surface outputs to the range -1 to 1
-        float aileronL = -1*constrain(rollPIDOut, -1, 1);
-        float aileronR = constrain(rollPIDOut, -1, 1);
-        float elevatorL = constrain(pitchPIDOut, -1, 1);
-        float elevatorR = constrain(pitchPIDOut, -1, 1);
-        float throttle = constrain(speedPIDOut, -1, 1);
         
-		#define SERVO_MIN 1000 // Minimum duty cycle
-		#define SERVO_MID 1500 // Mid duty cycle
-		#define SERVO_MAX 2000 // Maximum duty cycle
-        
-        // Compute duty cycle for PWM output from generic control
-        int16_t aileronLOut = ((aileronL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
-        int16_t aileronROut = ((aileronR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
-        int16_t elevatorLOut = ((elevatorL+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
-        int16_t elevatorROut = ((elevatorR+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
-        int16_t throttleOut = ((throttle+1.0)*(SERVO_MAX-SERVO_MIN)/2.0) + SERVO_MIN;
-        if(time >= nextPrint) {
-            // Print some status
-            nextPrint += 1000000;
-            hal.console->printf("** PERIOD **\r\n");
-        }
-        // Output PWM
-        hal.rcout->write(0, throttleOut);
-        hal.rcout->write(1, elevatorLOut);
-        hal.rcout->write(2, aileronROut);
-        hal.rcout->write(3, aileronLOut);
-    }
 }
 
 bool TakeOff(){
-	static bool TakeOff = false;
-	if(!TakeOff){
+	
+	if(!TakeOffBool){
+		hal.console->printf("TakeOff\n ");
 		// Compute heading PID
 		PID Heading;
 		float headingPIDOut = Heading.ComputePID(PSI,PSI,PSI_dot,Kp_head,Ki_head,Kd_head,dt);
@@ -387,11 +404,11 @@ bool TakeOff(){
 		hal.rcout->write(3, aileronLOut);
 		
 		//take off condition
-		if( abs(des_alt - ALT) < 1){
-			TakeOff = true;
-			return TakeOff;
+		if( abs(des_alt - ALT) < 2){
+			TakeOffBool = true;
+			return TakeOffBool;
 		}else{
-			return TakeOff;
+			return TakeOffBool;
 		}
 	}
 }
